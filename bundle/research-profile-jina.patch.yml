@@ -1,0 +1,35 @@
+# Dedicated one-shot app plus Jina page reading for a base-only research Profile.
+# This variant is installed only by an explicit `--reader jina` initializer call.
+# Target URLs are processed by Jina; JINA_API_KEY stays in the launching environment.
+
+- id: hmr
+  disabled: true
+
+- id: research-engine
+  config:
+    allowedTools:
+      - web_search
+      - mcp__reader__read_url
+
+- insert:
+    - id: jina-reader-prerequisite
+      name: 'dsh-open-deep-research/jina-reader-prerequisite'
+
+    - id: mcp-jina-reader
+      name: '@deepseek-ai/dsh-mcp-client'
+      inject: [tools, jinaReaderPrerequisite]
+      config:
+        serverName: reader
+        transport: streamable-http
+        url: 'https://mcp.jina.ai/v1?include_tools=read_url&max_tokens=8000'
+        headers:
+          Authorization: !!js ctx.jinaReaderPrerequisite.authorization
+        toolCallTimeoutMs: 60000
+        failOnStartupError: true
+
+    - id: open-deep-research-startup
+      name: 'dsh-open-deep-research/app-startup'
+      inject: [cmdlineArgs, jinaReaderPrerequisite]
+
+    - id: open-deep-research-runner
+      name: 'dsh-open-deep-research/app-runner'

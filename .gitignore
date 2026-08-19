@@ -1,0 +1,13 @@
+dist/
+node_modules/
+*.tgz
+.DS_Store
+.env
+.env.*
+!.env.example
+.dsh/
+.direnv/
+coverage/
+*.log
+/.agents/
+/AGENTS.md

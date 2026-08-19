@@ -1,0 +1,5 @@
+- insert:
+    - id: research-engine
+      name: 'dsh-open-deep-research/provider'
+    - id: tool-open-deep-research
+      name: 'dsh-open-deep-research/tool'

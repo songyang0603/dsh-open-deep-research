@@ -1,0 +1,14 @@
+# Dedicated one-shot app overlay for a base-only `research` Profile.
+# Copy this top-level patch list to that Profile's cordis.patch.yml.
+# Do not insert it into the stock `headless` or `web` Profile: those surfaces
+# already own their command-line arguments and process lifetime.
+
+- id: hmr
+  disabled: true
+
+- insert:
+    - id: open-deep-research-startup
+      name: 'dsh-open-deep-research/app-startup'
+
+    - id: open-deep-research-runner
+      name: 'dsh-open-deep-research/app-runner'
