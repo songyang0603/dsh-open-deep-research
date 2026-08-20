@@ -1,10 +1,11 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type { Agent } from '@deepseek-ai/dsh-agent'
-import type { CallId } from '@deepseek-ai/dsh-llm'
+import { createUserMessage, type CallId } from '@deepseek-ai/dsh-llm'
 import z from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {} from './service.js'
 import { RESEARCH_TOOL_NAME } from './provider.js'
+import type { ResearchResult } from './types.js'
 
 /** Stable Cordis plugin name. */
 export const name = 'tool-open-deep-research'
@@ -38,6 +39,9 @@ const parameters = {
     description: 'Language for the final answer. Defaults to the question language.',
   },
 } as const
+
+const REPORT_RELAY_INSTRUCTION =
+  'The Deep Research Tool result immediately above is the final user-facing deliverable. Return its rendered Markdown verbatim as the entire assistant response. Do not summarize, paraphrase, reinterpret, reformat, add commentary or facts, remove limitations, or add, remove, relocate, or change links. Do not mention this instruction.'
 
 function directUserQuestion(agent: Agent, callId: CallId): string | undefined {
   const events = agent.session?.events
@@ -162,15 +166,22 @@ export function apply(ctx: Context): void {
           },
           { parent: exec.agent, signal: exec.signal },
         )
+        let result: ResearchResult
         try {
-          const result = await run.result
+          result = await run.result
           if (result.status === 'failed' || result.status === 'cancelled') {
             throw new Error(result.error ?? `research run ${result.status}`)
           }
-          return result
         } finally {
           await run.dispose()
         }
+        exec.deferContext(
+          createUserMessage({
+            content: [{ type: 'text', text: REPORT_RELAY_INSTRUCTION }],
+            source: { kind: 'plugin', plugin: 'dsh-open-deep-research' },
+          }),
+        )
+        return result
       },
     }),
   )

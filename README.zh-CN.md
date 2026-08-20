@@ -162,6 +162,8 @@ stock `headless` 和 `web` 只会获得 Provider 与 Tool，其来源能力由�
 
 普通 Agent 调用中，Tool 会使用当前轮对话的直接用户文本作为研究问题。Tool 不接收模型补写的 `purpose` 或 `context`。需要显式传入这些字段时，请使用专用 CLI 或 TypeScript API。当前消息存在未说明的历史指代时，应先请用户补充上下文。
 
+运行结果为 `completed` 或 `partial` 时，Tool 会要求父 Agent 原样返回渲染后的 Markdown 报告。父 Agent 仍会生成普通 Assistant 回复，因此可能增加简短说明或调整少量格式。这可以降低引用被改写的概率，但不能保证字节级一致。需要精确取得规范报告时，请直接读取 Tool value 或 TypeScript 返回值。
+
 TypeScript API 可以直接调用当前 `ResearchEngine`：
 
 ```ts

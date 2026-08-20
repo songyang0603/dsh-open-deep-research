@@ -86,6 +86,21 @@ describe('open_deep_research tool consumer', () => {
         text: '# Fixture report\n\nA result with [one source](https://example.com/).',
       },
     ])
+    expect(outcome.additionalContexts).toEqual([
+      expect.objectContaining({
+        role: 'user',
+        source: { kind: 'plugin', plugin: 'dsh-open-deep-research' },
+        content: [
+          expect.objectContaining({
+            type: 'text',
+            text: expect.stringContaining('Return its rendered Markdown verbatim'),
+          }),
+        ],
+      }),
+    ])
+    expect(outcome.additionalContexts?.[0]?.content[0]).toMatchObject({
+      text: expect.stringContaining('add, remove, relocate, or change links'),
+    })
     expect(ctx.deepResearch).toBeInstanceOf(FakeResearchEngine)
     expect((ctx.deepResearch as FakeResearchEngine).seen).toMatchObject({
       request: {
@@ -248,6 +263,16 @@ describe('open_deep_research tool consumer', () => {
           'A result with [one source](https://example.com/).',
         ].join('\n'),
       },
+    ])
+    expect(outcome.additionalContexts).toEqual([
+      expect.objectContaining({
+        source: { kind: 'plugin', plugin: 'dsh-open-deep-research' },
+        content: [
+          expect.objectContaining({
+            text: expect.stringContaining('final user-facing deliverable'),
+          }),
+        ],
+      }),
     ])
   })
 })

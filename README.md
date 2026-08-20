@@ -162,6 +162,8 @@ Stock `headless` and `web` receive the Provider and Tool only. Their configured 
 
 For ordinary Agent calls, the Tool binds the research question to the direct user text in the current DSH turn. It does not accept model-authored `purpose` or `context`. Use the dedicated CLI or TypeScript API when those fields must be supplied explicitly; ask the user to clarify a message that depends on unstated earlier context.
 
+After a completed or partial run, the Tool asks the parent Agent to return the rendered Markdown report verbatim. The parent Agent still generates an ordinary assistant response and may add framing or make minor formatting changes. This reduces citation-rewrite risk but does not provide byte-level identity. Consume the Tool value or TypeScript result directly when the exact canonical report is required.
+
 The TypeScript API calls the selected `ResearchEngine` directly:
 
 ```ts
