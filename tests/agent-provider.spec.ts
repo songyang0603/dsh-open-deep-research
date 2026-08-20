@@ -67,7 +67,7 @@ class AdaptiveScriptedAdapter extends LlmAdapter {
     const unit = messages.match(/research:unit:(unit-\d+)/u)?.[1]
     if (unit !== undefined) {
       if (!messages.includes(`https://example.com/${unit}`)) {
-        yield* toolCallResponse('web_search', { query: `${unit} DSH` }, `search-${unit}`)
+        yield* toolCallResponse('web_search', { queries: [`${unit} DSH`] }, `search-${unit}`)
         return
       }
       yield* toolCallResponse(
@@ -146,7 +146,7 @@ class PageReadingAdapter extends LlmAdapter {
     if (messages.includes('research:unit:unit-1')) {
       if (!this.knownUrl && !messages.includes(pageUrl)) {
         this.calledTools.push('web_search')
-        yield* toolCallResponse('web_search', { query: 'official source' }, 'reader-search')
+        yield* toolCallResponse('web_search', { queries: ['official source'] }, 'reader-search')
         return
       }
       if (!messages.includes(`Page body for ${pageUrl}`)) {
@@ -228,7 +228,9 @@ async function harness(adapter: LlmAdapter, config: Config = {}): Promise<Contex
     defineTool({
       name: 'web_search',
       description: 'Deterministic research source fixture.',
-      parameters: { query: { type: 'string', required: true } },
+      parameters: {
+        queries: { type: 'array', required: true, items: { type: 'string' } },
+      },
       output: {
         schema: {
           type: 'object',
@@ -238,10 +240,11 @@ async function harness(adapter: LlmAdapter, config: Config = {}): Promise<Contex
         render: (_args, value) => [{ type: 'text', text: value.url }],
       },
       async execute(args) {
-        if (args.query === 'official source') {
+        const query = args.queries[0] ?? ''
+        if (query === 'official source') {
           return { url: 'https://example.com/discovered' }
         }
-        const unit = args.query.match(/unit-\d+/u)?.[0] ?? 'unit-1'
+        const unit = query.match(/unit-\d+/u)?.[0] ?? 'unit-1'
         return { url: `https://example.com/${unit}` }
       },
     }),

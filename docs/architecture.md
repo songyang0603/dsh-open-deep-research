@@ -1,6 +1,6 @@
 # Architecture
 
-DSH Open Deep Research is a DSH-native Deep Research agent and reference implementation. It owns a small research method and a stable domain result; DeepSeek Harness continues to own the general Agent runtime, models, tools, Presets, sessions, subagents, policy, workspaces, and product surfaces.
+DSH Open Deep Research is an open-source Deep Research agent and TypeScript framework for DeepSeek Harness. It owns the research method, domain contract, and reusable entry points; DeepSeek Harness continues to own the general Agent runtime, models, tools, Presets, sessions, subagents, policy, workspaces, and product surfaces.
 
 ## Package shape
 
@@ -30,6 +30,8 @@ Breadth is only a maximum fan-out of one, two, or three research units. It does 
 
 The canonical result contains a Markdown report, terminal status, normalized HTTP(S) links that appear in that report, timestamps, entry mode, and a Provider-defined implementation id. `metadata.mode` says whether the caller supplied a parent Agent; it does not expose the number of internal Agents. The default implementation id is `agent-adaptive`.
 
+CLI and TypeScript callers may supply `purpose` and `context` directly. The model-facing `open_deep_research` Tool does not expose those fields. For a normal DSH Agent call, the Tool correlates the execution's root call id with the calling Agent's public Session event log and uses direct user text from the current turn as the research question. The root id keeps the same binding when Code Mode dispatches the Tool as a nested call beneath `run_code`. It falls back to the model-provided `question` only when no matching direct user message exists, such as a plugin-initiated dispatch without a recorded root call. This prevents model-authored background from entering the dedicated caller-context fields. It does not resolve an ambiguous reference to an earlier turn; the Tool description asks the parent Agent to clarify such a request before delegation.
+
 ## Adaptive research method
 
 ```text
@@ -47,11 +49,13 @@ research children (N <= breadth cap, bounded concurrency)
 synthesis child --structured--> final Markdown report
 ```
 
-The Provider enforces breadth, concurrency, plan order, status mapping, and phase tool scope. The model chooses whether independent facets justify more than one unit. Each unit is instructed to search only when discovery is needed, read one or two high-value pages when a Reader Tool is available, never repeat an identical source call, and stop after four total source calls. A truncated document with no continuation control is reported as a limitation rather than retried with the same arguments. Planning and finding transfer use DSH's child-scoped `structured_output` runtime instead of parsing JSON from assistant prose.
+The Provider enforces breadth, concurrency, plan order, status mapping, and phase tool scope. The model chooses whether independent facets justify more than one unit; the planner is instructed to make the selected units collectively cover the dimensions requested by the user. Research units prefer the primary source directly responsible for a claim when one is suitable, such as official documentation or repositories, original papers, regulatory publications, company filings, and original report pages. Secondary sources remain useful for discovery, context, independent perspectives, and cross-checking.
+
+When a useful URL is supplied, a unit with a Reader is instructed to read it before discovery search. Otherwise it searches for candidates and reads the single highest-value page. Each page-reading call receives one URL string rather than an array; a second page is read only for a concrete gap or important cross-check. Short structured primary files such as package manifests are requested without a question filter so the Reader can return full content. Units never repeat an identical source call and stop after four total source calls. A truncated document with no continuation control is reported as a limitation rather than retried with the same arguments. Question-grounded excerpts may omit fields, so an absent field or phrase is not treated as proof that the original source lacks it; negative claims require complete content or another suitable primary source, otherwise they remain unresolved. These source-selection, evidence, and call-count rules are model-facing constraints, not a runtime scheduler. Planning and finding transfer use DSH's child-scoped `structured_output` runtime instead of parsing JSON from assistant prose.
 
 Package-private finding sources carry `access: 'search-result' | 'page-read'`. A research unit is instructed to mark `page-read` only after a reading Tool returned the page body and `search-result` only when an actual search result exists. A failed read with neither snippet nor body is recorded in limitations with an empty structured source list. Synthesis and the deterministic fallback display the distinction. The schema validates the label but runtime does not independently correlate it with Tool history. This internal model-reported field does not change public `ResearchSource` or `ResearchResult.sources`.
 
-The planner is instructed to preserve source and no-inference constraints without adding factual material that was absent from the request. Every research child receives the original request contract as well as its resolved unit; the brief and unit frame the task but are not returned source material and do not support factual claims by themselves. The synthesis child receives the original request, resolved brief, and compact findings in plan order, not raw session transcripts. Findings are explicitly marked as untrusted data so instructions embedded in retrieved pages do not become synthesis instructions. The writer is instructed to preserve material uncertainty and not introduce an external fact, URL, or citation absent from the request and usable findings. These remain model-facing semantic constraints rather than runtime hard enforcement.
+The planner is instructed to preserve source and no-inference constraints without adding factual material that was absent from the request. Every research child receives the original request contract as well as its resolved unit; the brief and unit frame the task but are not returned source material and do not support factual claims by themselves. The synthesis child receives the original request, resolved brief, and compact findings in plan order, not raw session transcripts. Findings are explicitly marked as untrusted data so instructions embedded in retrieved pages do not become synthesis instructions. The writer is instructed to lead with the requested conclusions, merge overlapping unit findings, avoid repeated background and links, prefer primary and page-read support for key claims, preserve material uncertainty, and not introduce an external fact, URL, or citation absent from the request and usable findings. These remain model-facing semantic constraints rather than runtime hard enforcement.
 
 An invalid or unsuccessful plan uses one whole-question unit and marks an otherwise successful run `partial`. One failed research unit does not cancel independent siblings. Synthesis still runs when at least one usable finding exists; if synthesis fails, the ordered findings become a visibly incomplete partial report that retains unit limitations and unavailable-unit errors. If every research unit fails, the run fails without invoking synthesis.
 
@@ -87,6 +91,8 @@ All phases use the configured DSH Subagent backend. The default `spawn` backend 
 
 Web search, literature plugins, files, GitHub, MCP, and future sources remain ordinary DSH Tools selected by the host Profile or Preset. The Jina path is Profile composition over DSH MCP Client, not a new Source Service or a requirement of `ResearchEngine`.
 
+DSH rc.8 models one `web_search` call as one to four queries. The four-call research-unit instruction counts Tool calls rather than individual queries; the package does not rewrite or split host Tool input.
+
 `ResearchResult.sources` currently means de-duplicated HTTP(S) links in the final report. It is not a source-quality score or a claim that all tools share one richer source record.
 
 ## Lifecycle
@@ -117,9 +123,9 @@ The package's initialization bin requires the Profile bundle list to contain exa
 
 The Jina path also requires outbound DNS, TCP, and TLS reachability to `mcp.jina.ai`; the package supplies neither a proxy nor an automatic Reader fallback. DSH MCP Client applies `toolCallTimeoutMs` to Tool calls, not startup, and does not expose one total connection/discovery deadline. The MCP SDK uses its 60-second default separately for initialize and each paginated `tools/list` request, so a complete discovery chain can take multiple intervals with little visible progress. Search-only remains independent of that endpoint. The 8,000-token Reader response can truncate long documents; complete arbitrary-length document coverage is not a current contract.
 
-The default bundle and search-only overlay contain no MCP row and do not enable DSH rc.7's local HTTP Fetch Provider. Existing non-empty Profile patches are not upgraded automatically.
+The default bundle and search-only overlay contain no MCP row and do not add an HTTP Fetch Provider. Existing non-empty Profile patches are not upgraded automatically.
 
-The rc.7 Profile installation prints missing-peer warnings for Cordis and DSH host packages. The Profile workspace sets `autoInstallPeers: false`, while DSH exposes its CLI dependency closure through a shared installation-fallback directory; pnpm cannot count that runtime fallback as satisfying peers in the Profile manifest. The package keeps its real peer contract instead of installing a duplicate DSH runtime merely to silence the warning.
+Profile installation can print missing-peer warnings for Cordis and DSH host packages. The Profile workspace sets `autoInstallPeers: false`, while DSH exposes its CLI dependency closure through a shared installation-fallback directory; pnpm cannot count that runtime fallback as satisfying peers in the Profile manifest. The package keeps its real peer contract instead of installing a duplicate DSH runtime merely to silence the warning.
 
 The app grammar exposes only serializable domain inputs: question, purpose, context, breadth, output format/language, and JSON presentation. Model, credentials, research tools, Preset, subagent backend, working directory, and policy remain DSH/Profile configuration. Jina credentials stay in the launching process environment and target URLs are processed by Jina only in the explicitly selected variant. Markdown mode keeps successful stdout report-only. For completed and partial outcomes, JSON mode serializes the existing canonical `ResearchResult` rather than defining a second result schema; failed and cancelled outcomes keep stdout empty and use stderr plus exit status.
 
@@ -135,7 +141,7 @@ The app grammar exposes only serializable domain inputs: question, purpose, cont
 | `subagentProvider`         | Backend for all phases; defaults to capability-complete `spawn`                   |
 | `maxParallelResearchUnits` | Maximum concurrent research units, from one to three; defaults to two             |
 
-The four-call unit budget is model-facing. DSH rc.7 does not expose a per-run tool-call or wall-clock cap through `AgentOptions`, so the package does not claim hard enforcement at the runtime layer.
+The four-call unit budget is model-facing. The package does not add a per-run tool-call or wall-clock scheduler, so it does not claim hard enforcement at the runtime layer.
 
 ## Why this is not a Workflow or a second runtime
 
@@ -153,6 +159,9 @@ The fixed research method is the vertical harness; DSH remains the execution ker
 - caller cancellation, Provider unload, and complete Agent cleanup;
 - command-line mapping, output/exit behavior, failed cleanup, search-only/Jina initialization, and secret-free overlay generation;
 - search-then-read and known-URL direct-read research children, source access labels, and Reader Tool isolation;
+- direct-user question binding for model-facing Tool calls, with a fallback for calls that have no matching human Session event;
 - a real Cordis Loader importing built package subpaths and executing Client, Tool, and one-shot app paths.
+
+The Alpha.5 candidate also completed clean search-only and Jina Profile composition with published DSH rc.8. A credential-backed Jina run then completed one search, two successful page reads, and a cited report through the packaged runtime.
 
 Release changes are summarized in [Changelog](../CHANGELOG.md).

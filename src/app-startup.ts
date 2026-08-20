@@ -113,7 +113,7 @@ function researchCommand(publish: (values: ResearchStartupValues) => void): Comm
     .option('--json', 'write completed or partial ResearchResult output as JSON')
     .addHelpText(
       'after',
-      `\nExamples:\n  dsh --profile research "What changed in DSH rc.7?"\n  dsh --profile research --breadth broad --format memo --language zh-CN "Compare two approaches"\n`,
+      `\nExamples:\n  dsh --profile research "What changed in DSH rc.8?"\n  dsh --profile research --breadth broad --format memo --language zh-CN "Compare two approaches"\n`,
     )
 
   program.action((questionParts: string[], options: CliOptions) => {

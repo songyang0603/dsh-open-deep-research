@@ -1,4 +1,6 @@
 import type { Context } from '@deepseek-ai/cordis'
+import type { Agent } from '@deepseek-ai/dsh-agent'
+import type { CallId } from '@deepseek-ai/dsh-llm'
 import z from '@deepseek-ai/schemastery'
 import { defineTool } from '@deepseek-ai/dsh-tools'
 import type {} from './service.js'
@@ -17,21 +19,14 @@ const parameters = {
   question: {
     type: 'string',
     required: true,
-    description: 'The concrete question to investigate and answer.',
-  },
-  purpose: {
-    type: 'string',
-    description: 'Why the answer is needed, when this changes emphasis or depth.',
-  },
-  context: {
-    type: 'string',
-    description: 'Known facts, constraints, definitions, or background for the research.',
+    description:
+      'Restate the latest self-contained user question without adding facts. The runtime prefers direct human text from the current turn when available.',
   },
   breadth: {
     type: 'string',
     enum: ['focused', 'balanced', 'broad'],
     description:
-      'Maximum research fan-out: focused=1, balanced=up to 2, broad=up to 3. This does not force extra branches.',
+      'Maximum research fan-out: focused=1, balanced=up to 2, broad=up to 3. Use broad for a user request with several independent dimensions; this does not force extra branches.',
   },
   format: {
     type: 'string',
@@ -44,13 +39,52 @@ const parameters = {
   },
 } as const
 
+function directUserQuestion(agent: Agent, callId: CallId): string | undefined {
+  const events = agent.session?.events
+  if (events === undefined) return undefined
+  let callIndex = -1
+  let turn: number | undefined
+
+  for (let index = events.length - 1; index >= 0; index -= 1) {
+    const event = events[index]
+    if (event?.type === 'tool/call' && event.data.callId === callId) {
+      callIndex = index
+      turn = event.data.turn
+      break
+    }
+  }
+  if (callIndex < 0 || turn === undefined) return undefined
+
+  let turnStartIndex = -1
+  for (let index = callIndex - 1; index >= 0; index -= 1) {
+    const event = events[index]
+    if (event?.type === 'turn/start' && event.data.turn === turn) {
+      turnStartIndex = index
+      break
+    }
+  }
+  if (turnStartIndex < 0) return undefined
+
+  const text = events
+    .slice(turnStartIndex + 1, callIndex)
+    .filter((event) => event.type === 'user/message' && event.data.source.kind === 'user')
+    .flatMap((event) =>
+      event.type === 'user/message'
+        ? event.data.content.flatMap((block) => (block.type === 'text' ? [block.text] : []))
+        : [],
+    )
+    .join('\n\n')
+    .trim()
+  return text || undefined
+}
+
 /** Register the thin model-facing adapter over ctx.deepResearch. */
 export function apply(ctx: Context): void {
   ctx.tools.register(
     defineTool({
       name: RESEARCH_TOOL_NAME,
       description:
-        'Delegate a substantial question to a focused Deep Research Agent that can search, synthesize, and return a cited report.',
+        "Delegate the user's substantial, self-contained question to a focused Deep Research Agent that can search, synthesize, and return a cited report. Preserve the user's question and explicit constraints; do not pre-answer it or add model-generated facts as background. Ask for clarification before calling when the latest user message depends on unstated earlier context.",
       parameters,
       output: {
         schema: {
@@ -112,11 +146,10 @@ export function apply(ctx: Context): void {
         if (exec.agent === undefined) {
           throw new Error(`${RESEARCH_TOOL_NAME} requires a calling DSH Agent`)
         }
+        const question = directUserQuestion(exec.agent, exec.rootCallId) ?? args.question
         const run = await ctx.deepResearch.start(
           {
-            question: args.question,
-            ...(args.purpose === undefined ? {} : { purpose: args.purpose }),
-            ...(args.context === undefined ? {} : { context: args.context }),
+            question,
             ...(args.breadth === undefined ? {} : { breadth: args.breadth }),
             ...(args.format === undefined && args.language === undefined
               ? {}

@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 ## [Unreleased]
 
+### Changed
+
+- Advanced the next development candidate to `0.1.0-alpha.5` and aligned the host, development dependencies, and Profile examples with DeepSeek Harness `0.1.0-rc.8`.
+- Bound ordinary `open_deep_research` Tool calls to direct user text from the current DSH turn and removed model-facing `purpose` and `context` fields.
+- Updated the default method to prioritize suitable primary sources, read one high-value URL at a time, avoid treating selective excerpt omissions as evidence of absence, cover requested dimensions, and reduce repeated conclusions and links during synthesis.
+- Prevented adjacent Markdown and CJK prose punctuation from being encoded into bare URLs in `ResearchResult.sources`.
+- Validated the offline suite, clean Profile composition, and a packaged rc.8 Full Research run with search, page reading, and a cited report.
+
 ## [0.1.0-alpha.4] - 2026-08-18
 
 Initial Public Preview.

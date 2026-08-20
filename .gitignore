@@ -11,3 +11,4 @@ coverage/
 *.log
 /.agents/
 /AGENTS.md
+/docs0/

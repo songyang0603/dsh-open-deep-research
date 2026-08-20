@@ -1,7 +1,11 @@
 import type { ResearchMode, ResearchResult, ResearchSource, ResearchStatus } from './types.js'
 
 function cleanUrl(candidate: string): string | undefined {
-  let trimmed = candidate.trim().replace(/[.,;:!?}>]+$/u, '')
+  let trimmed = candidate
+    .trim()
+    .split(/[、。〉》」』】！，：；？）]/u, 1)[0]
+    ?.replace(/[.,;:!?}`>]+$/u, '')
+  if (trimmed === undefined) return undefined
   while (trimmed.endsWith(']')) trimmed = trimmed.slice(0, -1)
   try {
     const url = new URL(trimmed)

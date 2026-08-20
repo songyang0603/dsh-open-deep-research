@@ -71,7 +71,7 @@ class AdaptiveAdapter extends LlmAdapter {
     }
     if (messages.includes('research:unit:unit-1')) {
       if (!messages.includes('https://example.com/')) {
-        yield* toolCallResponse('web_search', { query: 'fixture source' }, 'loader-search')
+        yield* toolCallResponse('web_search', { queries: ['fixture source'] }, 'loader-search')
         return
       }
       yield* toolCallResponse(
@@ -128,7 +128,9 @@ const SourceTool = {
       defineTool({
         name: 'web_search',
         description: 'Loader fixture source.',
-        parameters: { query: { type: 'string', required: true } },
+        parameters: {
+          queries: { type: 'array', required: true, items: { type: 'string' } },
+        },
         output: {
           schema: {
             type: 'object',
