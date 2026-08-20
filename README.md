@@ -4,7 +4,7 @@
 
 DSH Open Deep Research is an open-source Deep Research agent and TypeScript framework built on [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). It accepts a research question, produces a Markdown report with citation links, and exposes the same research service through a CLI, a DSH Tool, and a programmatic API.
 
-> **Project status:** `0.1.0-alpha.5` development candidate tested with published DSH `0.1.0-rc.8`. Alpha.5 has not been released or published to npm.
+> **Project status:** `0.1.0-alpha.5` Alpha Public Preview, tested with published DSH `0.1.0-rc.8`. It is distributed through GitHub Releases and is not published to npm.
 
 ## What it does
 
@@ -45,7 +45,7 @@ All entry points call the same `ResearchEngine`. The active Profile selects the 
 
 ## 🚀 Quickstart
 
-Build the current development package from source. The packaged commands below use the resulting `dsh-open-deep-research-0.1.0-alpha.5.tgz`.
+Download the prerelease package from GitHub. Contributors who want to build from source can follow [Contributing](./CONTRIBUTING.md).
 
 | Profile         | Source capabilities         | Credentials               | Network requirement            |
 | --------------- | --------------------------- | ------------------------- | ------------------------------ |
@@ -63,16 +63,14 @@ pnpm --version
 
 See the [pnpm installation guide](https://pnpm.io/installation) if the second command is unavailable.
 
-### 1. Build the package
+### 1. Download the package
 
 ```bash
-git clone https://github.com/songyang0603/dsh-open-deep-research.git
-cd dsh-open-deep-research
-pnpm install --frozen-lockfile
-pnpm pack
+curl -fL -O \
+  https://github.com/songyang0603/dsh-open-deep-research/releases/download/v0.1.0-alpha.5/dsh-open-deep-research-0.1.0-alpha.5.tgz
 ```
 
-This creates `dsh-open-deep-research-0.1.0-alpha.5.tgz` in the repository root. A release-asset Quickstart will replace this source build when Alpha.5 is published.
+This downloads `dsh-open-deep-research-0.1.0-alpha.5.tgz` into the current directory. The Release also includes `SHA256SUMS` for checksum verification.
 
 `plugin add` can print host peer warnings. Continue with initialization when the command exits with code `0`.
 
@@ -80,12 +78,17 @@ This creates `dsh-open-deep-research-0.1.0-alpha.5.tgz` in the repository root. 
 
 `research-jina` provides Web search and page reading. It sends selected public URLs to Jina without browser cookies. Use public, non-sensitive URLs and avoid signed, authenticated-session, private-network, or internal URLs.
 
-Set both keys:
+Set both keys and check that the deployment network can reach Jina:
 
 ```bash
 export DEEPSEEK_API_KEY='<your-deepseek-key>'
 export JINA_API_KEY='<your-jina-key>'
+
+curl --connect-timeout 10 --max-time 20 -I \
+  'https://mcp.jina.ai/v1?include_tools=read_url&max_tokens=8000'
 ```
+
+Any HTTP response confirms that DNS, TCP, and TLS reached the endpoint. This check does not validate the Key or complete MCP startup. Use the search-only Profile below if the endpoint does not respond.
 
 ```bash
 npx @deepseek-ai/dsh@0.1.0-rc.8 plugin --profile research-jina add \
@@ -205,7 +208,7 @@ This stock Web installation uses the search-only source configuration. The recom
 
 | Area                     | Current status                                                                                                   |
 | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| DSH `0.1.0-rc.8`         | Current development and compatibility line.                                                                      |
+| DSH `0.1.0-rc.8`         | Current supported and tested host line.                                                                          |
 | Jina Reader              | A live smoke test has passed. Availability still depends on the deployment network.                              |
 | Documents and Tool calls | Short pages and short PDFs are tested. Long inputs can be truncated. Source-call limits are prompt instructions. |
 | `ResearchResult.sources` | De-duplicated HTTP links from the final report. A link alone does not confirm page reading or source quality.    |

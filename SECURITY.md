@@ -4,7 +4,7 @@
 
 | Project version | DeepSeek Harness | Support level               |
 | --------------- | ---------------- | --------------------------- |
-| `0.1.0-alpha.5` | `0.1.0-rc.8`     | Development candidate       |
+| `0.1.0-alpha.5` | `0.1.0-rc.8`     | Public Preview, best effort |
 | `0.1.0-alpha.4` | `0.1.0-rc.7`     | Public Preview, best effort |
 
 Untagged commits and locally built packages have no support lifetime or compatibility promise.

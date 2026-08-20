@@ -164,6 +164,6 @@ The fixed research method is the vertical harness; DSH remains the execution ker
 - direct-user question binding for model-facing Tool calls, with a fallback for calls that have no matching human Session event;
 - a real Cordis Loader importing built package subpaths and executing Client, Tool, and one-shot app paths.
 
-The Alpha.5 candidate also completed clean search-only and Jina Profile composition with published DSH rc.8. A credential-backed Jina run then completed one search, two successful page reads, and a cited report through the packaged runtime.
+Alpha.5 completed clean search-only and Jina Profile composition with published DSH rc.8. A credential-backed Jina run then completed one search, two successful page reads, and a cited report through the packaged runtime.
 
 Release changes are summarized in [Changelog](../CHANGELOG.md).
